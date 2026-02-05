@@ -1,0 +1,29 @@
+# Source files
+src/
+examples/
+tests/
+*.test.tsx
+*.test.ts
+
+# Documentation
+*.md
+!README.md
+
+# Config files (not needed in published package)
+postcss.config.js
+tsconfig.json
+vite.config.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
