@@ -1,6 +1,6 @@
 # @davincidreams/dynamic-canvas-react
 
-A2UI-native dynamic canvas component for React. Renders streaming, agent-driven visuals from any A2UI-speaking source — LangChain agents, 3dchat, Microsoft Agent Framework (Orleans), or direct JSON.
+A2UI-native dynamic canvas component for React. Renders streaming, agent-driven visuals from any A2UI-speaking source — LangChain agents, Microsoft Agent Framework, or direct JSON.
 
 ## Features
 
