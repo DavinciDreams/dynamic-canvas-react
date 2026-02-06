@@ -1,31 +1,61 @@
 /**
- * Canvas context for managing canvas state and theme
+ * Canvas context — wraps SurfaceManager + preserves legacy hooks
+ *
+ * Backward-compatible: CanvasProvider, useCanvas, useCanvasContent, useCanvasLayout
+ * still work exactly as before. Additionally exposes A2UI surface state.
  */
 
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { Theme, CanvasContent, CanvasConfig } from '../types';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, type ReactNode } from 'react';
+import type { StoreApi } from 'zustand/vanilla';
+import type { Theme, CanvasContent } from '../types';
 import { defaultTheme, type ThemeContextType } from '../themes';
+import { createSurfaceManager, type SurfaceManagerStore } from './SurfaceManager';
+import { createDefaultRegistry, type ComponentRegistry } from './ComponentRegistry';
 
-const CanvasContext = createContext<ThemeContextType | undefined>(undefined);
+interface CanvasContextType extends ThemeContextType {
+  /** @deprecated Use useA2UISurface() instead */
+  content: CanvasContent | null;
+  /** @deprecated Use processMessage() instead */
+  setCanvasContent: (content: CanvasContent) => void;
+  layout: 'side-by-side' | 'stacked' | 'fullscreen';
+  setCanvasLayout: (layout: 'side-by-side' | 'stacked' | 'fullscreen') => void;
+  widthRatio: number;
+  setCanvasWidthRatio: (ratio: number) => void;
+  /** A2UI surface store */
+  surfaceStore: StoreApi<SurfaceManagerStore>;
+  /** Component registry */
+  registry: ComponentRegistry;
+}
+
+const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
 
 interface CanvasProviderProps {
   children: ReactNode;
   initialTheme?: Theme;
   initialThemeMode?: 'light' | 'dark' | 'system';
   initialContent?: CanvasContent;
+  /** Provide an external surface store (for sharing across components) */
+  surfaceStore?: StoreApi<SurfaceManagerStore>;
+  /** Provide an external component registry */
+  registry?: ComponentRegistry;
 }
 
 export const CanvasProvider: React.FC<CanvasProviderProps> = ({
   children,
   initialTheme = defaultTheme,
   initialThemeMode = 'light',
-  initialContent
+  initialContent,
+  surfaceStore: externalStore,
+  registry: externalRegistry,
 }) => {
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>(initialThemeMode);
-  const [content, setContent] = useState<CanvasContent | null>(initialContent);
+  const [content, setContent] = useState<CanvasContent | null>(initialContent || null);
   const [layout, setLayout] = useState<'side-by-side' | 'stacked' | 'fullscreen'>('side-by-side');
   const [widthRatio, setWidthRatio] = useState(0.4);
+
+  const storeRef = useRef(externalStore ?? createSurfaceManager());
+  const registryRef = useRef(externalRegistry ?? createDefaultRegistry());
 
   // Handle theme mode changes
   useEffect(() => {
@@ -78,12 +108,20 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
     setWidthRatio(ratio);
   };
 
-  const value: ThemeContextType = {
+  const value: CanvasContextType = useMemo(() => ({
     theme,
     setTheme,
     themeMode,
-    setThemeMode
-  };
+    setThemeMode,
+    content,
+    setCanvasContent,
+    layout,
+    setCanvasLayout,
+    widthRatio,
+    setCanvasWidthRatio,
+    surfaceStore: storeRef.current,
+    registry: registryRef.current,
+  }), [theme, themeMode, content, layout, widthRatio]);
 
   return (
     <CanvasContext.Provider value={value}>
@@ -100,6 +138,7 @@ export const useCanvas = () => {
   return context;
 };
 
+/** @deprecated Use useA2UISurface() instead */
 export const useCanvasContent = () => {
   const { content, setCanvasContent } = useCanvas();
   return { content, setContent: setCanvasContent };

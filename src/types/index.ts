@@ -1,8 +1,19 @@
 /**
  * Core type definitions for the Dynamic Canvas library
+ *
+ * Legacy types are preserved for backward compatibility.
+ * New code should use A2UI types from './schema'.
  */
 
+// Re-export A2UI types for convenience
+export type {
+  A2UIComponent,
+  A2UIComponentType,
+  A2UIMessage,
+} from '../schema';
+
 // Content types
+/** @deprecated Use A2UIComponentType instead */
 export type CanvasContentType = 'chart' | 'timeline' | 'code' | 'document' | 'custom';
 
 // Canvas configuration
@@ -18,7 +29,7 @@ export interface CanvasConfig {
   rendererProps?: Record<string, any>;
 }
 
-// Base canvas content
+/** @deprecated Use A2UIComponent instead */
 export interface CanvasContent {
   type: CanvasContentType;
   data: any;
@@ -43,6 +54,7 @@ export interface ChartOptions {
   showLegend?: boolean;
 }
 
+/** @deprecated Use ChartComponent from schema instead */
 export interface ChartContent extends CanvasContent {
   type: 'chart';
   chartType: ChartOptions['chartType'];
@@ -66,6 +78,7 @@ export interface TimelineOptions {
   compact?: boolean;
 }
 
+/** @deprecated Use TimelineComponent from schema instead */
 export interface TimelineContent extends CanvasContent {
   type: 'timeline';
   events: TimelineEvent[];
@@ -73,6 +86,7 @@ export interface TimelineContent extends CanvasContent {
 }
 
 // Code content
+/** @deprecated Use CodeComponent from schema instead */
 export interface CodeContent extends CanvasContent {
   type: 'code';
   code: string;
@@ -83,6 +97,7 @@ export interface CodeContent extends CanvasContent {
 }
 
 // Document content
+/** @deprecated Use DocumentComponent from schema instead */
 export interface DocumentContent extends CanvasContent {
   type: 'document';
   content: string;
@@ -91,6 +106,7 @@ export interface DocumentContent extends CanvasContent {
 }
 
 // Custom content
+/** @deprecated Use CustomComponent from schema with rendererKey instead */
 export interface CustomContent extends CanvasContent {
   type: 'custom';
   component?: React.ComponentType<any>;
@@ -98,6 +114,7 @@ export interface CustomContent extends CanvasContent {
 }
 
 // Union type for all content types
+/** @deprecated Use A2UIComponent instead */
 export type CanvasContentUnion = ChartContent | TimelineContent | CodeContent | DocumentContent | CustomContent;
 
 // Theme types
