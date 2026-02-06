@@ -1,399 +1,363 @@
-# @dynamic-canvas/react
+# @davincidreams/dynamic-canvas-react
 
-A modular, reusable dynamic canvas component for React that renders conversation-driven visuals alongside 3D avatars in chat applications.
+A2UI-native dynamic canvas component for React. Renders streaming, agent-driven visuals from any A2UI-speaking source — LangChain agents, 3dchat, Microsoft Agent Framework (Orleans), or direct JSON.
 
 ## Features
 
-- **Multiple Content Types**: Support for charts, timelines, code, documents, and custom components
-- **Theme System**: Built-in light/dark themes with full customization options
-- **Content Analysis**: Automatic content type detection from text
-- **Extensible**: Easy to add new renderers and themes
-- **Type Safe**: Full TypeScript support
-- **Responsive**: Works on all screen sizes
+- **A2UI Protocol**: Native support for the Agent-to-UI message protocol (createSurface, updateDataModel, updateComponents, etc.)
+- **9 Renderers**: Chart, Timeline, KnowledgeGraph, Map, Media, Document, Code, Artifact, Custom
+- **Streaming**: JSONL, SSE, WebSocket, and direct message ingestion with batched updates
+- **Lazy Loading**: Heavy renderers (D3, Cesium, shiki) loaded on demand with SVG fallbacks
+- **Schema-Only Export**: Zero-React-dependency `./schema` entry point for server-side / non-JS consumers
+- **Multi-Entry Build**: Tree-shake individual renderers via `./renderers/chart`, `./renderers/map`, etc.
+- **Theme System**: Built-in light/dark themes with full customization
+- **Type Safe**: Full TypeScript support with discriminated union component types
+- **Backward Compatible**: Legacy `CanvasProvider`, `useCanvas`, `useCanvasContent` hooks still work
 
 ## Installation
 
 ```bash
-npm install @dynamic-canvas/react
-# or
-yarn add @dynamic-canvas/react
-# or
-pnpm add @dynamic-canvas/react
+npm install @davincidreams/dynamic-canvas-react
 ```
+
+### Optional Peer Dependencies
+
+Install only the renderers you need:
+
+```bash
+# Charts (D3)
+npm install d3
+
+# Documents (Markdown)
+npm install react-markdown remark-gfm
+
+# Code (syntax highlighting)
+npm install shiki
+
+# Knowledge Graph (force-directed)
+npm install react-force-graph-2d
+# or for 3D:
+npm install react-force-graph-3d
+
+# Map (Cesium globe)
+npm install @cesium/engine resium
+```
+
+All renderers include built-in SVG/HTML fallbacks when their optional deps are not installed.
 
 ## Quick Start
 
-```tsx
-import { CanvasProvider, useCanvas, themes } from '@dynamic-canvas/react';
+### A2UI Messages (recommended)
 
-function App() {
-  const { content, setContent } = useCanvas();
+Feed A2UI JSON messages from your AI agent and the canvas renders automatically:
+
+```tsx
+import { useA2UISurface, RendererResolver } from '@davincidreams/dynamic-canvas-react';
+
+function AgentCanvas() {
+  const { activeSurface, getComponents, resolveData, store } = useA2UISurface({
+    sseUrl: '/api/agent/stream',
+  });
+
+  if (!activeSurface) return <div>Waiting for agent...</div>;
 
   return (
-    <CanvasProvider theme={themes.dark}>
-      <div className="flex h-screen">
-        <div className="w-3/4">
-          {/* Your main app content */}
-        </div>
-        <CanvasContainer theme={themes.dark}>
-          {content && (
-            <ContentRenderer content={content} theme={themes.dark} />
-          )}
-        </CanvasContainer>
-      </div>
-    </CanvasProvider>
+    <div>
+      {getComponents(activeSurface.id).map((component) => (
+        <RendererResolver
+          key={component.id}
+          component={component}
+          data={resolveData(activeSurface.id, '/')}
+          theme="dark"
+        />
+      ))}
+    </div>
   );
 }
 ```
 
-## Usage
+### Direct Messages
 
-### Basic Usage
-
-```tsx
-import { CanvasProvider, useCanvas, themes, ChartRenderer } from '@dynamic-canvas/react';
-
-function App() {
-  const { content, setContent } = useCanvas();
-
-  const handleResponse = (response: string) => {
-    const analyzed = ContentAnalyzer.analyze(response);
-    setContent(analyzed);
-  };
-
-  return (
-    <CanvasProvider theme={themes.dark}>
-      <div className="flex h-screen">
-        <div className="w-3/4">
-          {/* Chat interface */}
-        </div>
-        <div className="w-1/3">
-          {content && (
-            <ChartRenderer content={content} theme={themes.dark} />
-          )}
-        </div>
-      </div>
-    </CanvasProvider>
-  );
-}
-```
-
-### Chart Content
+Process A2UI messages directly without a stream:
 
 ```tsx
-const chartContent = {
-  type: 'chart',
-  chartType: 'bar',
-  data: {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
-    values: [10, 25, 18, 30, 22]
-  },
-  options: {
-    colors: ['#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e']
-  }
-};
+import { useA2UISurface } from '@davincidreams/dynamic-canvas-react';
 
-setContent(chartContent);
-```
-
-### Timeline Content
-
-```tsx
-const timelineContent = {
-  type: 'timeline',
-  events: [
-    {
-      date: '2024-01-15',
-      title: 'Project Started',
-      description: 'Initial planning and requirements gathering'
+const messages = [
+  { createSurface: { surfaceId: 's1' } },
+  {
+    updateDataModel: {
+      surfaceId: 's1',
+      path: '/chart',
+      value: { labels: ['Jan', 'Feb', 'Mar'], values: [10, 25, 18] },
     },
-    {
-      date: '2024-02-01',
-      title: 'Development Phase',
-      description: 'Core features implementation'
-    }
-  ]
-};
+  },
+  {
+    updateComponents: {
+      surfaceId: 's1',
+      components: [
+        {
+          id: 'c1',
+          component: 'Chart',
+          chartType: 'bar',
+          data: '/chart',
+        },
+      ],
+    },
+  },
+];
+
+function App() {
+  const { activeSurface, getComponents } = useA2UISurface({ messages });
+  // ...render components
+}
 ```
 
-### Code Content
+### WebSocket / Fetch Stream
 
 ```tsx
-const codeContent = {
-  type: 'code',
-  code: 'console.log("Hello, World!");',
-  language: 'javascript',
-  filename: 'app.js'
-};
+// WebSocket
+const result = useA2UISurface({ wsUrl: 'wss://agent.example.com/stream' });
+
+// Fetch (JSONL body)
+const result = useA2UISurface({
+  streamUrl: '/api/agent/generate',
+  streamInit: { method: 'POST', body: JSON.stringify({ prompt: '...' }) },
+});
 ```
 
-### Document Content
+### Legacy API
+
+The original `CanvasProvider` / `useCanvas` API still works:
 
 ```tsx
-const documentContent = {
-  type: 'document',
-  content: '# Welcome\n\nThis is a document rendered in the canvas.',
-  format: 'markdown'
-};
+import { CanvasProvider, useCanvas, themes } from '@davincidreams/dynamic-canvas-react';
+
+function App() {
+  return (
+    <CanvasProvider initialTheme={themes.dark}>
+      <MyApp />
+    </CanvasProvider>
+  );
+}
+
+function MyApp() {
+  const { content, setContent } = useCanvas();
+  // ...
+}
+```
+
+## A2UI Protocol
+
+The library speaks the A2UI (Agent-to-UI) protocol. Agents send JSON messages to create surfaces, populate data models, and attach components:
+
+### Envelope Messages
+
+| Message | Description |
+|---------|-------------|
+| `createSurface` | Create a new UI surface (canvas) |
+| `destroySurface` | Remove a surface |
+| `updateDataModel` | Set data at a JSON Pointer path |
+| `updateComponents` | Set or replace components on a surface |
+| `removeComponents` | Remove components by ID |
+| `appendData` | Append items to an array (streaming convenience) |
+| `patchDataModel` | JSON merge-patch the data model |
+
+### Component Types
+
+| Component | Description | Optional Dep |
+|-----------|-------------|-------------|
+| `Chart` | Bar, line, scatter, pie, area, donut charts | `d3` |
+| `Timeline` | Events with alternating/grouped layouts | — |
+| `KnowledgeGraph` | Force-directed node-edge graph | `react-force-graph-2d` |
+| `Map` | Globe with markers | `@cesium/engine` + `resium` |
+| `Media` | Image, video, audio | — |
+| `Document` | Markdown/HTML documents | `react-markdown` |
+| `Code` | Syntax-highlighted code blocks | `shiki` |
+| `Artifact` | Sandboxed iframe (HTML/CSS/JS) | — |
+| `Custom` | Registry-key based escape hatch | — |
+
+### Example: Streaming a Chart
+
+```jsonl
+{"createSurface":{"surfaceId":"s1","title":"Sales Dashboard"}}
+{"updateDataModel":{"surfaceId":"s1","path":"/sales","value":{"labels":["Q1","Q2","Q3","Q4"],"values":[120,340,250,410]}}}
+{"updateComponents":{"surfaceId":"s1","components":[{"id":"chart1","component":"Chart","chartType":"bar","data":"/sales","title":"Quarterly Sales"}]}}
+```
+
+### Example: Streaming a Timeline
+
+```jsonl
+{"createSurface":{"surfaceId":"s1"}}
+{"updateDataModel":{"surfaceId":"s1","path":"/events","value":[{"date":"2024-01-15","title":"Project Started","description":"Kickoff meeting"},{"date":"2024-06-01","title":"v1.0 Release","description":"First public release"}]}}
+{"updateComponents":{"surfaceId":"s1","components":[{"id":"t1","component":"Timeline","events":"/events","layout":"alternating"}]}}
+```
+
+## Schema-Only Import
+
+For server-side validation or non-React consumers (Python, C#, etc.), import types and validation without React:
+
+```ts
+import {
+  validateMessage,
+  validateComponent,
+  isA2UIMessage,
+  DYNAMIC_CANVAS_CATALOG,
+  type A2UIMessage,
+  type A2UIComponent,
+} from '@davincidreams/dynamic-canvas-react/schema';
+
+const msg = { createSurface: { surfaceId: 's1' } };
+const result = validateMessage(msg);
+// { valid: true, messageType: 'createSurface' }
 ```
 
 ## API Reference
 
-### CanvasProvider
+### Hooks
 
-Provides context for the canvas component.
+#### `useA2UISurface(options?)`
 
-```tsx
-<CanvasProvider
-  initialTheme={themes.dark}
-  initialThemeMode="dark"
-  initialContent={initialContent}
->
-  {children}
-</CanvasProvider>
+Primary hook — connects to a stream and manages surfaces.
+
+```ts
+interface UseA2UISurfaceOptions {
+  sseUrl?: string;           // SSE endpoint
+  wsUrl?: string;            // WebSocket endpoint
+  streamUrl?: string;        // Fetch stream URL
+  streamInit?: RequestInit;  // Fetch init options
+  messages?: A2UIMessage[];  // Direct messages
+  batchWindow?: number;      // Batch window in ms (default: 50)
+  onError?: (error: Error) => void;
+  store?: StoreApi<SurfaceManagerStore>; // Shared store
+}
 ```
 
-**Props:**
-- `initialTheme`: Initial theme object (default: `defaultTheme`)
-- `initialThemeMode`: Initial theme mode ('light' | 'dark' | 'system')
-- `initialContent`: Initial canvas content
+Returns: `surfaces`, `activeSurface`, `setActiveSurface`, `processMessage`, `processMessages`, `resolveData`, `getComponents`, `store`
 
-### useCanvas
+#### `useStreamingContent(options)`
 
-Hook for accessing canvas state.
+Subscribe to a single surface's streaming updates.
 
-```tsx
-const { content, setContent, theme, setTheme } = useCanvas();
+```ts
+const { surface, components, dataModel, resolveData, updatedAt } = useStreamingContent({
+  store,       // from useA2UISurface
+  surfaceId,   // surface to watch
+});
 ```
 
-**Returns:**
-- `content`: Current canvas content
-- `setContent`: Function to set content
-- `theme`: Current theme
-- `setTheme`: Function to set theme
+### Individual Renderer Imports
 
-### useCanvasContent
+Tree-shake by importing only what you need:
 
-Hook specifically for content management.
-
-```tsx
-const { content, setContent } = useCanvasContent();
+```ts
+import ChartRenderer from '@davincidreams/dynamic-canvas-react/renderers/chart';
+import TimelineRenderer from '@davincidreams/dynamic-canvas-react/renderers/timeline';
+import KnowledgeGraphRenderer from '@davincidreams/dynamic-canvas-react/renderers/knowledge-graph';
+import MapRenderer from '@davincidreams/dynamic-canvas-react/renderers/map';
+import MediaRenderer from '@davincidreams/dynamic-canvas-react/renderers/media';
+import DocumentRenderer from '@davincidreams/dynamic-canvas-react/renderers/document';
+import CodeRenderer from '@davincidreams/dynamic-canvas-react/renderers/code';
+import ArtifactRenderer from '@davincidreams/dynamic-canvas-react/renderers/artifact';
 ```
 
-### useCanvasLayout
+### Content Analyzer
 
-Hook for layout management.
+Auto-detect content type from raw text and convert to A2UI messages:
 
-```tsx
-const { layout, widthRatio, setLayout, setWidthRatio } = useCanvasLayout();
-```
+```ts
+import { ContentAnalyzer } from '@davincidreams/dynamic-canvas-react';
 
-### Renderers
+// Detect content type
+ContentAnalyzer.detectType('```js\nconsole.log("hi")\n```'); // 'code'
+ContentAnalyzer.detectType('# Hello World');                  // 'document'
+ContentAnalyzer.detectType('2024-01-01 Project Start');       // 'timeline'
 
-#### ChartRenderer
-
-```tsx
-<ChartRenderer
-  content={chartContent}
-  theme={themes.dark}
-/>
-```
-
-#### TimelineRenderer
-
-```tsx
-<TimelineRenderer
-  content={timelineContent}
-  theme={themes.dark}
-/>
-```
-
-#### CodeRenderer
-
-```tsx
-<CodeRenderer
-  content={codeContent}
-  theme={themes.dark}
-/>
-```
-
-#### DocumentRenderer
-
-```tsx
-<DocumentRenderer
-  content={documentContent}
-  theme={themes.dark}
-/>
-```
-
-#### CustomRenderer
-
-```tsx
-const CustomComponent = ({ data }) => <div>{data}</div>;
-
-const customContent = {
-  type: 'custom',
-  component: CustomComponent,
-  props: { data: 'Hello' }
-};
-
-<CustomRenderer content={customContent} theme={themes.dark} />
+// Convert to A2UI messages
+const messages = ContentAnalyzer.toA2UIMessages('```python\nprint("hello")\n```');
+// Returns: [createSurface, updateComponents with Code component]
 ```
 
 ## Theming
 
-### Default Themes
-
 ```tsx
-import { themes } from '@dynamic-canvas/react';
+import { themes } from '@davincidreams/dynamic-canvas-react';
 
-// Use built-in themes
-<CanvasProvider theme={themes.light}>
-  {/* Light theme */}
-</CanvasProvider>
+// Built-in themes
+themes.light
+themes.dark
+themes.default
 
-<CanvasProvider theme={themes.dark}>
-  {/* Dark theme */}
-</CanvasProvider>
-```
-
-### Custom Theme
-
-```tsx
-const customTheme = {
+// Custom theme
+const myTheme = {
   colors: {
-    background: '#ffffff',
-    surface: '#f8fafc',
+    background: '#0a0a0a',
+    surface: '#1a1a2e',
     primary: '#0ea5e9',
     secondary: '#6366f1',
-    text: '#0f172a',
+    text: '#e2e8f0',
     muted: '#64748b',
-    border: '#e2e8f0',
-    highlight: '#f1f5f9'
+    border: '#334155',
+    highlight: '#1e293b',
   },
-  spacing: {
-    xs: '4px',
-    sm: '8px',
-    md: '16px',
-    lg: '24px',
-    xl: '32px'
-  },
-  typography: {
-    font: 'Inter, sans-serif',
-    sizes: {
-      xs: '12px',
-      sm: '14px',
-      md: '16px',
-      lg: '18px',
-      xl: '20px'
-    },
-    weights: {
-      normal: 400,
-      medium: 500,
-      bold: 700
-    }
-  },
-  borderRadius: {
-    sm: '4px',
-    md: '8px',
-    lg: '12px',
-    xl: '16px'
-  },
-  shadows: {
-    sm: '0 1px 2px rgba(0,0,0,0.05)',
-    md: '0 4px 6px rgba(0,0,0,0.1)',
-    lg: '0 10px 15px rgba(0,0,0,0.1)'
-  }
+  // ...spacing, typography, borderRadius, shadows
 };
-
-<CanvasProvider theme={customTheme}>
-  {/* Custom theme */}
-</CanvasProvider>
 ```
 
-## Content Analysis
+## Custom Renderers
 
-The `ContentAnalyzer` class automatically detects content types:
-
-```tsx
-import { ContentAnalyzer } from '@dynamic-canvas/react';
-
-const response = "Sales: 50%, Growth: 25%";
-const analyzed = ContentAnalyzer.analyze(response);
-// Returns: { type: 'chart', data: { labels: ['50', '25'], values: [] } }
-```
-
-## Content Types
-
-| Type | Description | Renderer |
-|------|-------------|----------|
-| `chart` | Data visualizations | `ChartRenderer` |
-| `timeline` | Timeline events | `TimelineRenderer` |
-| `code` | Code snippets | `CodeRenderer` |
-| `document` | Documents | `DocumentRenderer` |
-| `custom` | Custom components | `CustomRenderer` |
-
-## Dependencies
-
-**Core Dependencies:**
-- `react`: ^18.0.0
-- `react-dom`: ^18.0.0
-- `framer-motion`: ^11.0.0
-- `lucide-react`: ^0.400.0
-- `zustand`: ^5.0.0
-
-**Optional Dependencies:**
-- `d3`: ^7.9.0 (for enhanced charts)
-- `react-syntax-highlighter`: ^15.5.0 (for code highlighting)
-- `react-pdf`: ^7.7.0 (for PDF rendering)
-- `markdown-it`: ^14.0.0 (for markdown rendering)
-
-## Extending
-
-### Adding a New Renderer
+Register custom renderers by key:
 
 ```tsx
-// src/renderers/VideoRenderer.tsx
-import React from 'react';
-import type { Theme } from '../types';
+import { ComponentRegistry } from '@davincidreams/dynamic-canvas-react';
 
-interface VideoRendererProps {
-  content: any;
-  theme: Theme;
+const registry = new ComponentRegistry();
+registry.register('MyWidget', () => import('./MyWidget'));
+
+// Then in A2UI messages:
+{
+  updateComponents: {
+    surfaceId: 's1',
+    components: [{ id: 'w1', component: 'Custom', rendererKey: 'MyWidget', props: { foo: 'bar' } }]
+  }
 }
-
-export const VideoRenderer: React.FC<VideoRendererProps> = ({ content, theme }) => {
-  return (
-    <div style={{ color: theme.colors.text }}>
-      <video src={content.url} controls />
-    </div>
-  );
-};
-
-// Export and register
-export { VideoRenderer };
 ```
 
-### Adding a New Theme
+## Architecture
 
-```tsx
-// src/themes/customTheme.ts
-import type { Theme } from '../types';
-import { defaultTheme } from './defaultTheme';
+```
+AI Agent → A2UI JSON → StreamProcessor → SurfaceManager → RendererResolver → React Renderers
+               (JSONL/SSE/WS)    (zustand store)     (Suspense + ErrorBoundary)
+                                                                    ↓
+                                    Chart | Timeline | Graph | Map | Media | Doc | Code | Artifact | Custom
+```
 
-export const customTheme: Theme = {
-  ...defaultTheme,
-  colors: {
-    ...defaultTheme.colors,
-    primary: '#ff6b6b'
-  }
-};
+- **StreamProcessor**: Parses JSONL, SSE, WebSocket, or direct JSON arrays
+- **SurfaceManager**: Zustand store managing surfaces, data models, and components
+- **RendererResolver**: Suspense + ErrorBoundary wrapper for lazy-loaded renderers
+- **ComponentRegistry**: Maps component type strings to React renderer factories
+
+## Bundle Size
+
+| Entry | Gzip |
+|-------|------|
+| Schema only (`./schema`) | ~2 KB |
+| Core + all renderers (`.`) | ~8 KB |
+| Individual renderers | 0.4–2.5 KB each |
+
+Heavy dependencies (D3, Cesium, shiki) are loaded on demand when a component requires them.
+
+## Development
+
+```bash
+npm install
+npm run dev          # Start Vite dev server
+npm run build        # Build library (ES + CJS)
+npm run type-check   # TypeScript check
+npm test             # Run tests (124 tests)
+npm run test:watch   # Watch mode
 ```
 
 ## License
 
 MIT
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
