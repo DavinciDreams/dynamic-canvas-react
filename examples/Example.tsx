@@ -5,7 +5,7 @@
  */
 
 import React, { useState } from 'react';
-import { CanvasProvider, useCanvas, themes, ChartRenderer, TimelineRenderer, CodeRenderer, DocumentRenderer, ContentAnalyzer } from '../src';
+import { CanvasProvider, useCanvas, darkTheme, ChartRenderer, TimelineRenderer, CodeRenderer, DocumentRenderer, ContentAnalyzer } from '../src';
 
 // Example 1: Basic Chart Rendering
 function ChartExample() {
@@ -26,7 +26,7 @@ function ChartExample() {
   return (
     <div className="example-container">
       <h3>Chart Example</h3>
-      <ChartRenderer content={chartData} theme={themes.dark} />
+      <ChartRenderer content={chartData} theme={darkTheme} />
     </div>
   );
 }
@@ -64,7 +64,7 @@ function TimelineExample() {
   return (
     <div className="example-container">
       <h3>Timeline Example</h3>
-      <TimelineRenderer content={timelineData} theme={themes.dark} />
+      <TimelineRenderer content={timelineData} theme={darkTheme} />
     </div>
   );
 }
@@ -87,7 +87,7 @@ console.log(greet('World'));`,
   return (
     <div className="example-container">
       <h3>Code Example</h3>
-      <CodeRenderer content={codeData} theme={themes.dark} />
+      <CodeRenderer content={codeData} theme={darkTheme} />
     </div>
   );
 }
@@ -117,7 +117,7 @@ Install the package and start building amazing visualizations!`,
   return (
     <div className="example-container">
       <h3>Document Example</h3>
-      <DocumentRenderer content={documentData} theme={themes.dark} />
+      <DocumentRenderer content={documentData} theme={darkTheme} />
     </div>
   );
 }
@@ -145,7 +145,7 @@ function DynamicContentExample() {
       <button onClick={handleAnalyze} style={{ padding: '8px 16px' }}>
         Analyze Content
       </button>
-      {content && <ChartRenderer content={content} theme={themes.dark} />}
+      {content && <ChartRenderer content={content} theme={darkTheme} />}
     </div>
   );
 }
@@ -212,7 +212,7 @@ function ChatIntegrationExample() {
         ))}
       </div>
       <div className="chat-content">
-        <ChartRenderer content={responses[selectedIndex].content} theme={themes.dark} />
+        <ChartRenderer content={responses[selectedIndex].content} theme={darkTheme} />
       </div>
     </div>
   );
@@ -221,7 +221,7 @@ function ChatIntegrationExample() {
 // Main Example Component
 function ExampleApp() {
   return (
-    <CanvasProvider theme={themes.dark}>
+    <CanvasProvider theme={darkTheme}>
       <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
         <h1 style={{ color: 'white', marginBottom: '20px' }}>
           @dynamic-canvas/react Examples
