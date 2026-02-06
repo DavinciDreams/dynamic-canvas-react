@@ -1,4 +1,4 @@
-# @davincidreams/dynamic-canvas-react
+# @atlas.agents/a2ui-canvas
 
 A2UI-native dynamic canvas component for React. Renders streaming, agent-driven visuals from any A2UI-speaking source — LangChain agents, Microsoft Agent Framework, or direct JSON.
 
@@ -17,7 +17,7 @@ A2UI-native dynamic canvas component for React. Renders streaming, agent-driven 
 ## Installation
 
 ```bash
-npm install @davincidreams/dynamic-canvas-react
+npm install @atlas.agents/a2ui-canvas
 ```
 
 ### Optional Peer Dependencies
@@ -52,7 +52,7 @@ All renderers include built-in SVG/HTML fallbacks when their optional deps are n
 Feed A2UI JSON messages from your AI agent and the canvas renders automatically:
 
 ```tsx
-import { useA2UISurface, RendererResolver } from '@davincidreams/dynamic-canvas-react';
+import { useA2UISurface, RendererResolver } from '@atlas.agents/a2ui-canvas';
 
 function AgentCanvas() {
   const { activeSurface, getComponents, resolveData, store } = useA2UISurface({
@@ -81,7 +81,7 @@ function AgentCanvas() {
 Process A2UI messages directly without a stream:
 
 ```tsx
-import { useA2UISurface } from '@davincidreams/dynamic-canvas-react';
+import { useA2UISurface } from '@atlas.agents/a2ui-canvas';
 
 const messages = [
   { createSurface: { surfaceId: 's1' } },
@@ -131,7 +131,7 @@ const result = useA2UISurface({
 The original `CanvasProvider` / `useCanvas` API still works:
 
 ```tsx
-import { CanvasProvider, useCanvas, themes } from '@davincidreams/dynamic-canvas-react';
+import { CanvasProvider, useCanvas, themes } from '@atlas.agents/a2ui-canvas';
 
 function App() {
   return (
@@ -205,7 +205,7 @@ import {
   DYNAMIC_CANVAS_CATALOG,
   type A2UIMessage,
   type A2UIComponent,
-} from '@davincidreams/dynamic-canvas-react/schema';
+} from '@atlas.agents/a2ui-canvas/schema';
 
 const msg = { createSurface: { surfaceId: 's1' } };
 const result = validateMessage(msg);
@@ -251,14 +251,14 @@ const { surface, components, dataModel, resolveData, updatedAt } = useStreamingC
 Tree-shake by importing only what you need:
 
 ```ts
-import ChartRenderer from '@davincidreams/dynamic-canvas-react/renderers/chart';
-import TimelineRenderer from '@davincidreams/dynamic-canvas-react/renderers/timeline';
-import KnowledgeGraphRenderer from '@davincidreams/dynamic-canvas-react/renderers/knowledge-graph';
-import MapRenderer from '@davincidreams/dynamic-canvas-react/renderers/map';
-import MediaRenderer from '@davincidreams/dynamic-canvas-react/renderers/media';
-import DocumentRenderer from '@davincidreams/dynamic-canvas-react/renderers/document';
-import CodeRenderer from '@davincidreams/dynamic-canvas-react/renderers/code';
-import ArtifactRenderer from '@davincidreams/dynamic-canvas-react/renderers/artifact';
+import ChartRenderer from '@atlas.agents/a2ui-canvas/renderers/chart';
+import TimelineRenderer from '@atlas.agents/a2ui-canvas/renderers/timeline';
+import KnowledgeGraphRenderer from '@atlas.agents/a2ui-canvas/renderers/knowledge-graph';
+import MapRenderer from '@atlas.agents/a2ui-canvas/renderers/map';
+import MediaRenderer from '@atlas.agents/a2ui-canvas/renderers/media';
+import DocumentRenderer from '@atlas.agents/a2ui-canvas/renderers/document';
+import CodeRenderer from '@atlas.agents/a2ui-canvas/renderers/code';
+import ArtifactRenderer from '@atlas.agents/a2ui-canvas/renderers/artifact';
 ```
 
 ### Content Analyzer
@@ -266,7 +266,7 @@ import ArtifactRenderer from '@davincidreams/dynamic-canvas-react/renderers/arti
 Auto-detect content type from raw text and convert to A2UI messages:
 
 ```ts
-import { ContentAnalyzer } from '@davincidreams/dynamic-canvas-react';
+import { ContentAnalyzer } from '@atlas.agents/a2ui-canvas';
 
 // Detect content type
 ContentAnalyzer.detectType('```js\nconsole.log("hi")\n```'); // 'code'
@@ -281,7 +281,7 @@ const messages = ContentAnalyzer.toA2UIMessages('```python\nprint("hello")\n```'
 ## Theming
 
 ```tsx
-import { themes } from '@davincidreams/dynamic-canvas-react';
+import { themes } from '@atlas.agents/a2ui-canvas';
 
 // Built-in themes
 themes.light
@@ -309,7 +309,7 @@ const myTheme = {
 Register custom renderers by key:
 
 ```tsx
-import { ComponentRegistry } from '@davincidreams/dynamic-canvas-react';
+import { ComponentRegistry } from '@atlas.agents/a2ui-canvas';
 
 const registry = new ComponentRegistry();
 registry.register('MyWidget', () => import('./MyWidget'));
