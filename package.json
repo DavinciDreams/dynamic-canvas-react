@@ -1,6 +1,6 @@
 {
   "name": "@atlas.agents/a2ui-canvas",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "description": "A2UI-native dynamic canvas component for React — interoperable with LangChain, 3dchat, Microsoft Agent Framework, and any A2UI-speaking client",
   "main": "dist/index.cjs",
